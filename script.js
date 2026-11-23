@@ -7,17 +7,16 @@ let currentChat = "group";
 let isCipherActive = false;
 let currentDailyCode = "";
 
-if (!localStorage.getItem("sc_db_init")) {
+if (!localStorage.getItem("sc_db_v2_init")) {
     localStorage.clear();
-    localStorage.setItem("sc_db_init", "true");
+    localStorage.setItem("sc_db_v2_init", "true");
 }
 
 let db_users = JSON.parse(localStorage.getItem("sc_users")) || {};
-let db_pending = JSON.parse(localStorage.getItem("sc_pending")) || {};
 let db_banned = JSON.parse(localStorage.getItem("sc_banned")) || {};
 let db_chats = JSON.parse(localStorage.getItem("sc_chats")) || { group: [] };
 let db_deleted = JSON.parse(localStorage.getItem("sc_deleted")) || {}; 
-let db_config = JSON.parse(localStorage.getItem("sc_config")) || { email: "", lastCodeTime: 0 };
+let db_config = JSON.parse(localStorage.getItem("sc_config")) || { email: "", lastCodeTime: 0, globalPass: "1914" };
 
 window.onload = function() {
     checkDailyCode();
@@ -65,9 +64,9 @@ function checkDailyCode() {
 
 function handleLogin() {
     const name = document.getElementById("loginName").value.trim();
-    const pin = document.getElementById("loginPin").value.trim();
+    const pass = document.getElementById("loginPin").value.trim();
     
-    if(!name && pin === ADMIN_PASS) {
+    if(!name && pass === ADMIN_PASS) {
         currentUser = "ADMIN";
         isAdmin = true;
         sessionStorage.setItem("sc_session", JSON.stringify({user: currentUser, isAdmin: true}));
@@ -75,7 +74,7 @@ function handleLogin() {
         return;
     }
 
-    if(!name || pin.length !== 4) { document.getElementById("loginMsg").innerText = "Name and 4-digit PIN required."; return; }
+    if(!name) { document.getElementById("loginMsg").innerText = "Name required."; return; }
     
     if(db_banned[name] && Date.now() < db_banned[name]) {
         let minsLeft = Math.ceil((db_banned[name] - Date.now()) / 60000);
@@ -83,30 +82,31 @@ function handleLogin() {
         return;
     }
 
-    if(db_users[name]) {
-        if(db_users[name] === pin) {
-            currentUser = name;
-            isAdmin = false;
-            sessionStorage.setItem("sc_session", JSON.stringify({user: currentUser, isAdmin: false}));
-            showChatScreen();
-        } else {
-            document.getElementById("loginMsg").innerText = "Incorrect PIN.";
-        }
-    } else {
-        db_pending[name] = pin;
-        localStorage.setItem("sc_pending", JSON.stringify(db_pending));
-        document.getElementById("loginScreen").classList.remove("active");
-        document.getElementById("pendingScreen").classList.add("active");
+    if(db_users[name] && db_users[name] === pass) {
+        currentUser = name;
+        isAdmin = false;
+        sessionStorage.setItem("sc_session", JSON.stringify({user: currentUser, isAdmin: false}));
+        showChatScreen();
+    } 
+    else if (!db_users[name] && pass === db_config.globalPass) {
+        db_users[name] = pass;
+        localStorage.setItem("sc_users", JSON.stringify(db_users));
+        currentUser = name;
+        isAdmin = false;
+        sessionStorage.setItem("sc_session", JSON.stringify({user: currentUser, isAdmin: false}));
+        showChatScreen();
+    } 
+    else {
+        document.getElementById("loginMsg").innerText = "Incorrect Access Password.";
     }
 }
 
 function showChatScreen() {
     document.getElementById("loginScreen").classList.remove("active");
-    document.getElementById("pendingScreen").classList.remove("active");
     document.getElementById("chatApp").classList.add("active");
     
     document.getElementById("myNameDisplay").innerText = currentUser;
-    document.getElementById("myPinDisplay").innerText = isAdmin ? "System Administrator" : "PIN: ****";
+    document.getElementById("myPinDisplay").innerText = isAdmin ? "System Administrator" : "User Access Granted";
     
     if(isAdmin) document.getElementById("adminIcon").style.display = "block";
     
@@ -117,6 +117,7 @@ function showChatScreen() {
 function openAdminPanel() {
     document.getElementById("adminEmail").value = db_config.email || "";
     document.getElementById("adminDailyCode").innerText = currentDailyCode;
+    document.getElementById("newGlobalPass").value = db_config.globalPass;
     
     const list = document.getElementById("userManagementList");
     list.innerHTML = "";
@@ -134,19 +135,19 @@ function openAdminPanel() {
         list.appendChild(div);
     }
     
-    for(let user in db_pending) {
-        hasUsers = true;
-        let div = document.createElement("div");
-        div.className = "user-item";
-        div.innerHTML = `<span>${user} (Pending)</span>
-            <button class="btn-approve" onclick="approveUser('${user}')">Approve</button>`;
-        list.appendChild(div);
-    }
-    
     if(!hasUsers) list.innerHTML = "<p style='color:#888; font-size:12px;'>No users found.</p>";
     
     loadSpyOptions();
     document.getElementById("adminPanel").style.display = "flex";
+}
+
+function changeGlobalPass() {
+    let newPass = document.getElementById("newGlobalPass").value.trim();
+    if(newPass.length > 0) {
+        db_config.globalPass = newPass;
+        localStorage.setItem("sc_config", JSON.stringify(db_config));
+        alert("Global Access Password updated!");
+    }
 }
 
 function loadSpyOptions() {
@@ -189,20 +190,10 @@ function saveEmail() {
     alert("Email saved.");
 }
 
-function approveUser(name) {
-    db_users[name] = db_pending[name];
-    delete db_pending[name];
-    localStorage.setItem("sc_users", JSON.stringify(db_users));
-    localStorage.setItem("sc_pending", JSON.stringify(db_pending));
-    openAdminPanel();
-}
-
 function deleteUser(name) {
     if(confirm(`Delete user ${name}?`)) {
         delete db_users[name];
-        delete db_pending[name];
         localStorage.setItem("sc_users", JSON.stringify(db_users));
-        localStorage.setItem("sc_pending", JSON.stringify(db_pending));
         openAdminPanel();
         loadContacts();
     }
