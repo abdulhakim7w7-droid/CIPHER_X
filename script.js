@@ -7,9 +7,9 @@ let currentChat = "group";
 let isCipherActive = false;
 let currentDailyCode = "";
 
-if (!localStorage.getItem("sc_db_v2_init")) {
+if (!localStorage.getItem("sc_db_v3_init")) {
     localStorage.clear();
-    localStorage.setItem("sc_db_v2_init", "true");
+    localStorage.setItem("sc_db_v3_init", "true");
 }
 
 let db_users = JSON.parse(localStorage.getItem("sc_users")) || {};
