@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAKIM /SecureChat Pro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="loginScreen" class="screen active">
+        <div class="login-box">
+            <h1>SecureChat</h1>
+            <p id="loginMsg" style="color: #ff5252; margin-bottom: 10px; font-size: 14px;"></p>
+            <input type="text" id="loginName" placeholder="Username (Leave empty for Admin)">
+            <input type="password" id="loginPin" placeholder="PIN / Admin Password">
+            <button id="loginBtn">Enter System</button>
+        </div>
+    </div>
+
+    <div id="pendingScreen" class="screen">
+        <div class="login-box">
+            <h1 style="color: #ffeb3b;">Pending Approval</h1>
+            <p>Your request has been sent to the Admin.</p>
+            <p>Wait for approval, then refresh.</p>
+            <button onclick="location.reload()" style="background: #333; color: white;">Refresh</button>
+        </div>
+    </div>
+
+    <div id="chatApp" class="screen">
+        <div class="sidebar">
+            <div class="user-profile">
+                <h3 id="myNameDisplay"></h3>
+                <p id="myPinDisplay"></p>
+            </div>
+            <div class="contacts-list">
+                <div class="contact" onclick="switchChat('group', 'Group Chat')">
+                    <div class="avatar">G</div>
+                    <div class="info"><h4>Group Chat</h4></div>
+                </div>
+                <div id="dynamicContacts"></div>
+            </div>
+            <button id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="main-chat">
+            <div class="chat-header">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <h3 id="chatTitle">Group Chat</h3>
+                    <button id="clearChatBtn" style="background:#ff5252; border:none; color:white; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:12px;">Clear Chat</button>
+                </div>
+                <div id="adminIcon" title="Admin Dashboard" style="display:none; cursor:pointer; font-size:24px;">🛡️</div>
+            </div>
+            <div class="chat-messages" id="messagesArea"></div>
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Type a message...">
+                <button id="sendBtn">Send</button>
+                <button id="cipherToggleBtn" style="background: #333; padding: 12px;">🔑 Cipher: OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminPanel" class="modal">
+        <div class="modal-content">
+            <h2>Admin Dashboard</h2>
+            <div style="background: #0e1217; padding: 10px; margin-bottom: 15px;">
+                <input type="email" id="adminEmail" placeholder="Admin Email" style="width: 100%; padding: 8px; margin-bottom:5px;">
+                <button onclick="saveEmail()" style="padding: 8px; width: 100%;">Save Email</button>
+                
+                <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <p style="font-size: 12px; margin:0;">Daily Code: <strong id="adminDailyCode" style="color:#00e676;"></strong></p>
+                    <button onclick="copyToClipboard(document.getElementById('adminDailyCode').innerText)" style="padding:5px 10px; font-size:12px; width:auto; background:#2196f3; color:white; border:none; border-radius:5px; cursor:pointer;">Copy</button>
+                </div>
+            </div>
+            
+            <h3 style="color: #ffeb3b; margin-bottom: 10px;">Manage Users</h3>
+            <div id="userManagementList" style="max-height: 150px; overflow-y: auto; text-align: left; margin-bottom:15px; border-bottom: 1px solid #333; padding-bottom:10px;"></div>
+            
+            <h3 style="color: #2196f3; margin-bottom: 10px;">Spy on Chats</h3>
+            <select id="adminSpySelect" style="width: 100%; padding: 8px; background: #0e1217; color: white; border: 1px solid #333; border-radius: 5px; margin-bottom: 10px;" onchange="loadSpyChat()">
+                <option value="">-- Select a Chat --</option>
+            </select>
+            <div id="adminSpyArea" style="background: #0e1217; height: 120px; overflow-y: auto; padding: 10px; border-radius: 5px; text-align: left; font-size: 12px;"></div>
+
+            <button class="close-btn" style="margin-top: 15px; background: #ff5252; width: 100%; padding: 10px; border:none; color:white; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <div id="cipherModal" class="modal">
+        <div class="modal-content">
+            <h2>Cipher Tool</h2>
+            <p style="font-size: 12px; margin-bottom: 10px;">Enter Daily Code to activate encryption</p>
+            <input type="password" id="dailyCodeInput" placeholder="Daily Code" style="margin-bottom: 10px;">
+            <button onclick="activateCipher()" style="width: 100%; padding: 10px; background: #00e676; border:none; font-weight:bold; cursor:pointer; margin-bottom: 10px;">Activate</button>
+            
+            <div id="cipherActiveArea" style="display:none; margin-top: 20px; background: #0e1217; padding: 15px; border-radius: 8px; text-align: left;">
+                <h3 style="color: #2196f3; margin-bottom: 10px;">Decryption Tool</h3>
+                <p style="font-size: 12px; color: #8892b0; margin-bottom: 5px;">Enter Text to Decrypt:</p>
+                <input type="text" id="decryptInput" placeholder="Type encrypted text..." style="width: 100%; padding: 8px; margin-bottom: 5px;" oninput="doDecrypt()">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <p id="decryptOutput" style="color: #ffeb3b; font-weight: bold; word-wrap: break-word; margin:0;"></p>
+                    <button onclick="copyToClipboard(document.getElementById('decryptOutput').innerText)" style="padding:5px 10px; font-size:12px; background:#2196f3; color:white; border:none; border-radius:5px; cursor:pointer;">Copy</button>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('cipherModal').style.display='none'" style="margin-top: 20px; background: #333; width: 100%; padding: 10px; border:none; color:white; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
